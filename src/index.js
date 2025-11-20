@@ -34,12 +34,24 @@ bot.on("callback_query", (query) => {
 
 bot.on("message", (msg) => {
   const chatId = msg.chat.id;
-  const text = msg.text?.trim();
+  const text = msg.text?.trim().toLowerCase();
 
   if (!text) return;
 
+  // === Saludos o pedidos de menú ===
+  const triggersMenu = [
+    "hola", "buenas", "que tal", "menu", "modulos", 
+    "modulo", "inicio", "empezar", "ver modulos"
+  ];
+
+  if (triggersMenu.some(t => text.includes(t))) {
+    return enviarMenu(chatId);
+  }
+
+  // Comando oficial /start sigue funcionando
   if (text === "/start") return enviarMenu(chatId);
 
+  // Resto del flujo del chatbot
   handleUserMessage(chatId, text);
 });
 
