@@ -13,7 +13,7 @@ import {
 } from "./router.js";
 
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 // Inicializamos DB
 const db = createDB();
