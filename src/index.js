@@ -1,8 +1,7 @@
 // === index.js ===
-// Punto de entrada — Telegram + Webhook + DB
 
-import app from "./webhook.js";        // Servidor Express REAL
-import bot from "./telegram.js";       // Bot Telegram
+import app from "./webhook.js";
+import bot from "./telegram.js";
 import { createDB } from "./database.js";
 import {
   enviarMenu,
@@ -12,13 +11,11 @@ import {
   setDB
 } from "./router.js";
 
-
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 
 // Inicializamos DB
 const db = createDB();
 setDB(db);
-
 
 
 // === EVENTOS DEL BOT ===
@@ -26,7 +23,6 @@ bot.on("callback_query", (query) => {
   const chatId = query.message.chat.id;
   const data = query.data;
 
-  // 🔒 Si intenta abrir un módulo bloqueado
   if (data.startsWith("lock_")) {
     const modulo = data.replace("lock_", "");
     return bot.sendMessage(chatId, `⚠️ El módulo ${modulo} todavía no está habilitado.`);
@@ -35,7 +31,6 @@ bot.on("callback_query", (query) => {
   if (data.startsWith("mod")) return handleModuleSelection(chatId, data);
   if (data.startsWith("sub")) return handleSubtemaSelection(chatId, data);
 });
-
 
 bot.on("message", (msg) => {
   const chatId = msg.chat.id;
@@ -46,4 +41,10 @@ bot.on("message", (msg) => {
   if (text === "/start") return enviarMenu(chatId);
 
   handleUserMessage(chatId, text);
+});
+
+
+// === IMPORTANTE: INICIAR SERVIDOR EXPRESS ===
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor Express en puerto ${PORT}`);
 });

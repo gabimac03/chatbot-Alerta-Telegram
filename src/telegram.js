@@ -1,32 +1,28 @@
 // === telegram.js ===
-// Inicializa el bot de Telegram usando WebHooks
 
 import TelegramBot from "node-telegram-bot-api";
 import { TELEGRAM_TOKEN } from "../config/config.js";
 
 if (!TELEGRAM_TOKEN) {
-  console.error("❌ ERROR: No se encontró TELEGRAM_TOKEN en config.js o .env");
+  console.error("❌ ERROR: No se encontró TELEGRAM_TOKEN");
   process.exit(1);
 }
 
-// --- BOT CONFIGURADO EN MODO WEBHOOK ---
+// URL publica de Render (NO usar PUBLIC_URL ni NGROK)
+const RENDER_URL = process.env.RENDER_EXTERNAL_URL; 
+// Render la expone automáticamente en producción
+
+if (!RENDER_URL) {
+  console.error("❌ ERROR: Falta RENDER_EXTERNAL_URL (Render la crea solo en deploy)");
+}
+
 const bot = new TelegramBot(TELEGRAM_TOKEN, {
-  webHook: {
-    port: process.env.PORT || 3000,
-  },
+  webHook: true,
 });
 
-// Establecer la URL pública que viene desde NGROK
-const PUBLIC_URL = process.env.PUBLIC_URL;
+// Registrar webhook correcto
+bot.setWebHook(`${RENDER_URL}/webhook`);
 
-if (!PUBLIC_URL) {
-  console.error("❌ ERROR: Falta PUBLIC_URL en .env");
-  console.error("Ejemplo: PUBLIC_URL=https://xxxxx.ngrok-free.app");
-  process.exit(1);
-}
-
-bot.setWebHook(`${PUBLIC_URL}/webhook`);
-
-console.log("🤖 Bot de Telegram inicializado correctamente");
+console.log("🤖 Bot Telegram con webhook en Render");
 
 export default bot;
