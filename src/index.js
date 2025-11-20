@@ -19,9 +19,7 @@ const PORT = process.env.PORT || 10000;
 const db = createDB();
 setDB(db);
 
-app.listen(PORT, () => {
-  console.log(`Webhook activo en puerto ${PORT}`);
-});
+
 
 // === EVENTOS DEL BOT ===
 bot.on("callback_query", (query) => {
