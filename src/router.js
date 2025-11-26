@@ -1,9 +1,11 @@
-// router.js
+// === router.js ===
+
 import bot from "./telegram.js";
 import { IA } from "./ia.js";
 import { getSubtemas, getContenidoSubtema } from "./modules.js";
 
 let db = null;
+
 export function setDB(database) {
   db = database;
 }
@@ -20,12 +22,14 @@ function createUser(chatId) {
 }
 
 function updateState(chatId, state) {
-  db.prepare(`UPDATE users SET state = ? WHERE telegram_id = ?`).run(state, String(chatId));
+  db.prepare(`UPDATE users SET state = ? WHERE telegram_id = ?`)
+    .run(state, String(chatId));
 }
 
 function updateModule(chatId, moduleNumber) {
-  db.prepare(`UPDATE users SET module_selected = ?, subtema_selected = NULL WHERE telegram_id = ?`)
-    .run(String(moduleNumber), String(chatId));
+  db.prepare(
+    `UPDATE users SET module_selected = ?, subtema_selected = NULL WHERE telegram_id = ?`
+  ).run(String(moduleNumber), String(chatId));
 }
 
 function updateSubtema(chatId, subtema) {
@@ -33,9 +37,13 @@ function updateSubtema(chatId, subtema) {
     .run(subtema, String(chatId));
 }
 
+
+
+// ==========================
+// MENÚ PRINCIPAL
+// ==========================
 export function enviarMenu(chatId) {
-  // MÓDULOS habilitados (editá esta lista cuando actives nuevos módulos)
-  const habilitados = [1, 2]; // ← por ahora solo módulo 1 y 2 activados
+  const habilitados = [1, 2];
 
   const botones = [];
 
@@ -51,10 +59,8 @@ export function enviarMenu(chatId) {
     };
 
     if (habilitados.includes(i)) {
-      // módulo habilitado
       botones.push([{ text: titulos[i], callback_data: `mod${i}` }]);
     } else {
-      // módulo bloqueado con candado
       botones.push([{ text: `${titulos[i]} 🔒`, callback_data: `lock_${i}` }]);
     }
   }
@@ -65,8 +71,9 @@ export function enviarMenu(chatId) {
 }
 
 
+
 // ==========================
-// MODULO → SUBTEMAS
+// MÓDULO SELECCIONADO
 // ==========================
 export function handleModuleSelection(chatId, data) {
   const moduleNumber = data.replace("mod", "");
@@ -80,15 +87,20 @@ export function handleModuleSelection(chatId, data) {
     { text: `📌 ${s.titulo}`, callback_data: `sub_${moduleNumber}_${s.id}` }
   ]);
 
-  bot.sendMessage(chatId, `📘 Elegiste el módulo *${moduleNumber}*.\nAhora elegí un subtema:`, {
-    parse_mode: "Markdown",
-    reply_markup: { inline_keyboard: botones }
-  });
+  bot.sendMessage(chatId,
+    `📘 Elegiste el módulo *${moduleNumber}*.\nAhora elegí un subtema:`,
+    {
+      parse_mode: "Markdown",
+      reply_markup: { inline_keyboard: botones }
+    }
+  );
 }
 
-// =======================
+
+
+// ==========================
 // SUBTEMA SELECCIONADO
-// =======================
+// ==========================
 export function handleSubtemaSelection(chatId, data) {
   const [, modulo, subtema] = data.split("_");
 
@@ -103,19 +115,45 @@ export function handleSubtemaSelection(chatId, data) {
   updateSubtema(chatId, subtema);
 }
 
+
+
 // ==========================
-// MENSAJE DEL USUARIO
+// MENSAJES DEL USUARIO
 // ==========================
 export async function handleUserMessage(chatId, text) {
   createUser(chatId);
+
+  const saludo = text.toLowerCase();
+
+  // 🟦 SALUDO AUTOMÁTICO
+  if (
+    saludo.includes("hola") ||
+    saludo.includes("buenas") ||
+    saludo.includes("menu") ||
+    saludo.includes("inicio") ||
+    saludo.includes("modulo") ||
+    saludo.includes("modulos") ||
+    saludo.includes("módulos")
+  ) {
+    await bot.sendMessage(chatId, "¡Hola! 😊 Acá tenés el menú de módulos:");
+    return enviarMenu(chatId);
+  }
+
   const user = getUser(chatId);
 
+  // Si no eligió módulo → mostrar menú
   if (!user.module_selected) return enviarMenu(chatId);
+
+  // Si no eligió subtema
   if (!user.subtema_selected)
-    return bot.sendMessage(chatId, "Elegí un subtema primero tocando uno de los botones.");
+    return bot.sendMessage(chatId, "Elegí un subtema tocando un botón.");
 
-  const contenido = getContenidoSubtema(user.module_selected, user.subtema_selected);
+  const contenido = getContenidoSubtema(
+    user.module_selected,
+    user.subtema_selected
+  );
 
+  // 🟦 RESPUESTA BASADA EN TEORÍA DEL CURSO
   if (contenido) {
     const prompt = `
 Sos un asistente experto del curso A.L.E.R.T.A UNCuyo.
@@ -127,12 +165,13 @@ Pregunta del usuario:
 ${text}
 
 Si no encontrás la respuesta en el contenido, decí: "Necesito buscar afuera".
-`;
+    `;
 
     const respuesta = await IA(prompt);
     return bot.sendMessage(chatId, respuesta);
   }
 
+  // 🟦 Si no encuentra contenido → IA pura
   const respuesta = await IA(text);
   bot.sendMessage(chatId, respuesta);
 }
