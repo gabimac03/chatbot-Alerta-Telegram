@@ -13,13 +13,14 @@ const db = createDB();
 import { setDB } from "./router.js";
 setDB(db);
 
-console.log("📥 Update recibido:", JSON.stringify(update, null, 2));
 
 
 // Webhook de Telegram
 app.post("/webhook", async (req, res) => {
   const update = req.body;
 
+  console.log("📥 Update recibido:", JSON.stringify(update, null, 2));
+  
   if (update.callback_query) {
     const chatId = update.callback_query.message.chat.id;
     const data = update.callback_query.data;
