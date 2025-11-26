@@ -1,43 +1,43 @@
-import TelegramBot from "node-telegram-bot-api";
-import { generarRespuesta } from "./src/ia.js";
-import dotenv from "dotenv";
-dotenv.config();
+// === server.js ===
 
-// ESTA ES LA CORRECCIÓN:
-const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true });
+import express from "express";
+import bot from "./telegram.js";
+import { handleUserMessage, handleModuleSelection, enviarMenu } from "./router.js";
+import { createDB } from "./database.js";
 
-// Función para dividir mensajes largos
-function dividirRespuesta(texto, max = 4000) {
-  const partes = [];
-  let inicio = 0;
+const app = express();
+app.use(express.json());
 
-  while (inicio < texto.length) {
-    partes.push(texto.slice(inicio, inicio + max));
-    inicio += max;
+// DB
+const db = createDB();
+import { setDB } from "./router.js";
+setDB(db);
+
+// Webhook de Telegram
+app.post("/webhook", async (req, res) => {
+  const update = req.body;
+
+  if (update.callback_query) {
+    const chatId = update.callback_query.message.chat.id;
+    const data = update.callback_query.data;
+
+    if (data.startsWith("mod"))
+      return handleModuleSelection(chatId, data);
+
+    if (data.startsWith("lock_"))
+      return bot.sendMessage(chatId, "⚠️ Este módulo aún no está habilitado.");
   }
 
-  return partes;
-}
+  if (update.message) {
+    const chatId = update.message.chat.id;
+    const text = update.message.text;
 
-bot.on("message", async (msg) => {
-  const chatId = msg.chat.id;
-  const pregunta = msg.text;
-
-  console.log("📩 Mensaje recibido:", pregunta);
-
-  try {
-    const respuesta = await generarRespuesta(pregunta);
-
-    const partes = dividirRespuesta(respuesta);
-
-    for (const parte of partes) {
-      await bot.sendMessage(chatId, parte);
-    }
-
-  } catch (err) {
-    console.error("❌ Error en IA:", err);
-    bot.sendMessage(chatId, "Hubo un error generando la respuesta.");
+    return handleUserMessage(chatId, text);
   }
+
+  res.sendStatus(200);
 });
 
-console.log("🤖 Bot en funcionamiento usando Long Polling...");
+// Servidor
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log("Servidor OK en puerto", PORT));

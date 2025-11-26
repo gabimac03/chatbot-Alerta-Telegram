@@ -8,21 +8,19 @@ if (!TELEGRAM_TOKEN) {
   process.exit(1);
 }
 
-// URL publica de Render (NO usar PUBLIC_URL ni NGROK)
-const RENDER_URL = process.env.RENDER_EXTERNAL_URL; 
-// Render la expone automáticamente en producción
-
+// URL pública de Render (Render la crea sola)
+const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
 if (!RENDER_URL) {
-  console.error("❌ ERROR: Falta RENDER_EXTERNAL_URL (Render la crea solo en deploy)");
+  console.error("❌ ERROR: Falta RENDER_EXTERNAL_URL");
 }
 
 const bot = new TelegramBot(TELEGRAM_TOKEN, {
   webHook: true,
 });
 
-// Registrar webhook correcto
+// Registrar webhook
 bot.setWebHook(`${RENDER_URL}/webhook`);
 
-console.log("🤖 Bot Telegram con webhook en Render");
+console.log("🤖 Bot Telegram con webhook activo");
 
 export default bot;
