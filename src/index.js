@@ -1,62 +1,51 @@
 // === index.js ===
 
-import app from "./webhook.js";
+import express from "express";
 import bot from "./telegram.js";
-import { createDB } from "./database.js";
 import {
-  enviarMenu,
   handleUserMessage,
-  handleModuleSelection,
-  handleSubtemaSelection,
-  setDB
+  enviarMenu,
+  handleModuleSelection
 } from "./router.js";
 
-const PORT = process.env.PORT || 3000;
+import { setDB } from "./router.js";
+import { createDB } from "./database.js";
 
-// Inicializamos DB
+const app = express();
+app.use(express.json());
+
+// --- Inicializar DB ---
 const db = createDB();
 setDB(db);
 
+// --- Webhook Telegram ---
+app.post("/webhook", async (req, res) => {
+  const update = req.body;
 
-// === EVENTOS DEL BOT ===
-bot.on("callback_query", (query) => {
-  const chatId = query.message.chat.id;
-  const data = query.data;
-
-  if (data.startsWith("lock_")) {
-    const modulo = data.replace("lock_", "");
-    return bot.sendMessage(chatId, `⚠️ El módulo ${modulo} todavía no está habilitado.`);
+  if (update.message) {
+    const chatId = update.message.chat.id;
+    const text = update.message.text;
+    await handleUserMessage(chatId, text);
   }
 
-  if (data.startsWith("mod")) return handleModuleSelection(chatId, data);
-  if (data.startsWith("sub")) return handleSubtemaSelection(chatId, data);
-});
+  if (update.callback_query) {
+    const chatId = update.callback_query.message.chat.id;
+    const data = update.callback_query.data;
 
-bot.on("message", (msg) => {
-  const chatId = msg.chat.id;
-  const text = msg.text?.trim().toLowerCase();
+    if (data.startsWith("mod")) {
+      return handleModuleSelection(chatId, data);
+    }
 
-  if (!text) return;
-
-  // === Saludos o pedidos de menú ===
-  const triggersMenu = [
-    "hola", "buenas", "que tal", "menu", "modulos", 
-    "modulo", "inicio", "empezar", "ver modulos"
-  ];
-
-  if (triggersMenu.some(t => text.includes(t))) {
-    return enviarMenu(chatId);
+    if (data.startsWith("lock_")) {
+      return bot.sendMessage(chatId, "⚠️ Ese módulo todavía no está habilitado.");
+    }
   }
 
-  // Comando oficial /start sigue funcionando
-  if (text === "/start") return enviarMenu(chatId);
-
-  // Resto del flujo del chatbot
-  handleUserMessage(chatId, text);
+  res.sendStatus(200);
 });
 
-
-// === IMPORTANTE: INICIAR SERVIDOR EXPRESS ===
+// --- Iniciar servidor ---
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor Express en puerto ${PORT}`);
+  console.log(`Servidor activo en puerto ${PORT}`);
 });
