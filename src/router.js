@@ -1,9 +1,11 @@
 // === router.js ===
 
+// --- Imports ---
 import bot from "./telegram.js";
 import { IA } from "./ia.js";
 import { getContenidoModulo } from "./modules.js";
 
+// --- Base de datos local ---
 let db = null;
 
 export function setDB(database) {
@@ -21,10 +23,10 @@ function createUser(chatId) {
   ).run(String(chatId), "idle", null);
 }
 
-function updateModule(chatId, moduleNumber) {
+export function updateModule(chatId, moduleNumber) {
   db.prepare(
     `UPDATE users SET module_selected = ? WHERE telegram_id = ?`
-  ).run(String(moduleNumber), String(chatId));
+  ).run(moduleNumber, String(chatId));
 }
 
 
@@ -33,20 +35,19 @@ function updateModule(chatId, moduleNumber) {
 // MENÚ PRINCIPAL
 // ==========================
 export function enviarMenu(chatId) {
-
-  const habilitados = [1, 2]; // ACTIVOS
-
-  const botones = [];
+  const habilitados = [1, 2];
 
   const titulos = {
     1: "📚 Módulo 1 – Protección de la Información",
-    2: "🔐 Módulo 2 – Correo Electrónico Seguro",
+    2: "🔐 Módulo 2 – Correo Seguro",
     3: "🗝️ Módulo 3 – Contraseñas Seguras",
-    4: "💻 Módulo 4 – Puesto de Trabajo Seguro",
+    4: "💻 Módulo 4 – Puesto Seguro",
     5: "📱 Módulo 5 – Dispositivos Móviles",
-    6: "🌐 Módulo 6 – Redes Sociales Seguras",
+    6: "🌐 Módulo 6 – Redes Sociales",
     7: "🤖 Módulo 7 – IA Responsable"
   };
+
+  const botones = [];
 
   for (let i = 1; i <= 7; i++) {
     if (habilitados.includes(i)) {
@@ -64,16 +65,16 @@ export function enviarMenu(chatId) {
 
 
 // ==========================
-// MÓDULO SELECCIONADO
+// MANEJO DE SELECCIÓN
 // ==========================
 export function handleModuleSelection(chatId, data) {
-  const moduleNumber = data.replace("mod", "");
+  const numero = data.replace("mod", "");
 
-  updateModule(chatId, moduleNumber);
+  updateModule(chatId, numero);
 
-  bot.sendMessage(
+  return bot.sendMessage(
     chatId,
-    `📘 Elegiste el *Módulo ${moduleNumber}*.\nEscribime tu duda y te respondo usando SOLO la teoría del módulo.`,
+    `📘 Elegiste el *Módulo ${numero}*.\nEscribime tu duda y te respondo usando SOLO la teoría del módulo.`,
     { parse_mode: "Markdown" }
   );
 }
@@ -81,79 +82,87 @@ export function handleModuleSelection(chatId, data) {
 
 
 // ==========================
-// MENSAJES DEL USUARIO
+// MANEJO DE MENSAJES
 // ==========================
 export async function handleUserMessage(chatId, text) {
+
   createUser(chatId);
+  const user = getUser(chatId);
 
-  const saludo = text.toLowerCase().trim();
+  const mensaje = text.toLowerCase().trim();
 
 
 
-  // === SALUDO REAL (NO DETECTA “módulo”) ===
-  if (
-    saludo === "hola" ||
-    saludo === "buenas" ||
-    saludo === "menu" ||
-    saludo === "inicio"
-  ) {
+  // === SALUDOS (rápido) ===
+  if (["hola", "buenas", "menu", "inicio"].includes(mensaje)) {
     await bot.sendMessage(chatId, "¡Hola! 😊 Elegí un módulo para comenzar:");
     return enviarMenu(chatId);
   }
 
 
 
-  // === DETECTAR CAMBIO DE MÓDULO POR TEXTO (corto) ===
-  // Permite: "modulo 1", "módulo 2", "quiero modulo 1"
+  // === Detectar “modulo 1”, “módulo 2”, etc. ===
+  const match = mensaje.match(/m[oó]dulo\s*(\d)/);
 
-  const matchModulo = saludo.match(/m[oó]dulo\s*(\d)/);
-
-  if (matchModulo) {
-    const numero = matchModulo[1];
-
+  if (match) {
+    const numero = match[1];
     updateModule(chatId, numero);
 
-    await bot.sendMessage(
+    return bot.sendMessage(
       chatId,
       `📘 Cambiaste al *Módulo ${numero}*. Preguntame lo que quieras.`,
       { parse_mode: "Markdown" }
     );
-
-    return;
   }
 
 
 
-  // === Ya debe tener módulo elegido ===
-  const user = getUser(chatId);
-
-  if (!user.module_selected)
+  // === Si NO tiene módulo → mostrar menú ===
+  if (!user.module_selected) {
     return enviarMenu(chatId);
+  }
 
 
 
-  // === Cargar contenido del módulo ===
+  // === Obtener teoría del módulo ===
   const contenido = getContenidoModulo(user.module_selected);
 
   if (!contenido)
-    return bot.sendMessage(chatId, "El módulo aún no está cargado.");
+    return bot.sendMessage(chatId, "⚠️ El módulo aún no está configurado.");
 
 
 
-  // === IA con teoría del módulo ===
+  // === OPTIMIZACIÓN: prompt corto y eficiente ===
   const prompt = `
-Sos un asistente experto del curso A.L.E.R.T.A UNCuyo.
-Respondé SOLO usando esta información del módulo ${user.module_selected}:
+Respondé usando SOLO esta teoría del módulo ${user.module_selected}:
 
 ${contenido}
 
 Pregunta del usuario:
-${text}
+"${text}"
 
-Si no encontrás la respuesta, decí exactamente: "Necesito buscar afuera".
+Si no encontrás la respuesta exacta en la teoría, respondé: "Necesito buscar afuera".
   `;
 
-  const respuesta = await IA(prompt);
-  return bot.sendMessage(chatId, respuesta);
-}
 
+
+  // === Ejecutar IA (rápido) ===
+  let respuesta;
+
+  try {
+    respuesta = await IA(prompt);
+  } catch (e) {
+    console.error("❌ Error IA:", e);
+    return bot.sendMessage(chatId, "Hubo un error generando la respuesta.");
+  }
+
+
+  // === Respuesta + botón volver ===
+  return bot.sendMessage(chatId, respuesta, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "🔙 Volver al menú", callback_data: "volver_menu" }]
+      ]
+    }
+  });
+}

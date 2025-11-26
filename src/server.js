@@ -4,6 +4,8 @@ import express from "express";
 import bot from "./telegram.js";
 import { handleUserMessage, handleModuleSelection, enviarMenu } from "./router.js";
 import { createDB } from "./database.js";
+import { enviarMenu, updateModule } from "./router.js";
+
 
 const app = express();
 app.use(express.json());
@@ -20,7 +22,7 @@ app.post("/webhook", async (req, res) => {
   const update = req.body;
 
   console.log("📥 Update recibido:", JSON.stringify(update, null, 2));
-  
+
   if (update.callback_query) {
     const chatId = update.callback_query.message.chat.id;
     const data = update.callback_query.data;
@@ -40,6 +42,17 @@ app.post("/webhook", async (req, res) => {
   }
 
   res.sendStatus(200);
+});
+
+// MANEJA BOTON VOLVER
+bot.on("callback_query", (query) => {
+  const chatId = query.message.chat.id;
+  const data = query.data;
+
+  if (data === "volver_menu") {
+    updateModule(chatId, null);
+    return enviarMenu(chatId);
+  }
 });
 
 // Servidor
