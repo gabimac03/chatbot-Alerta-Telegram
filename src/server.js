@@ -1,60 +1,40 @@
-// === server.js ===
-
 import express from "express";
 import bot from "./telegram.js";
-import { createDB } from "./database.js";
-import { enviarMenu, updateModule, handleUserMessage, handleModuleSelection } from "./router.js";
-
-
+import {
+  enviarMenu,
+  handleModuleSelection,
+  handleUserMessage
+} from "./router.js";
 
 const app = express();
 app.use(express.json());
 
-// DB
-const db = createDB();
-import { setDB } from "./router.js";
-setDB(db);
-
-
-
-// Webhook de Telegram
+// Webhook Telegram → Render recibe las actualizaciones
 app.post("/webhook", async (req, res) => {
   const update = req.body;
 
-  console.log("📥 Update recibido:", JSON.stringify(update, null, 2));
+  if (update.message) {
+    const chatId = update.message.chat.id;
+    const text = update.message.text;
+    handleUserMessage(chatId, text);
+  }
 
   if (update.callback_query) {
     const chatId = update.callback_query.message.chat.id;
     const data = update.callback_query.data;
 
-    if (data.startsWith("mod"))
-      return handleModuleSelection(chatId, data);
+    if (data === "volver_menu") {
+      return enviarMenu(chatId);
+    }
 
-    if (data.startsWith("lock_"))
-      return bot.sendMessage(chatId, "⚠️ Este módulo aún no está habilitado.");
-  }
-
-  if (update.message) {
-    const chatId = update.message.chat.id;
-    const text = update.message.text;
-
-    return handleUserMessage(chatId, text);
+    if (data.startsWith("mod")) {
+      const numero = data.replace("mod", "");
+      return handleModuleSelection(chatId, numero);
+    }
   }
 
   res.sendStatus(200);
 });
 
-// MANEJA BOTON VOLVER
-bot.on("callback_query", (query) => {
-  const chatId = query.message.chat.id;
-  const data = query.data;
-
-  if (data === "volver_menu") {
-    updateModule(chatId, null);
-    return enviarMenu(chatId);
-  }
-});
-
-// Servidor
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("Servidor OK en puerto", PORT));
+app.listen(PORT, () => console.log("🚀 Servidor con webhook activo"));
