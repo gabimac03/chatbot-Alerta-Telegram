@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Bot de autoayuda educativa para el curso TxD - UNCuyo",
   "type": "module",
-  "main": "node src/server.js",
+  "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "postinstall": "npm rebuild better-sqlite3 --build-from-source"
