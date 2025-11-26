@@ -59,7 +59,7 @@ export function enviarMenu(chatId) {
     }
   }
 
-  return bot.sendMessage(chatId, "📘 Elegí un módulo:", {
+  return bot.sendMessage(chatId, "✨ Hola, soy tu asistente virtual. Estoy acá para ayudarte con cualquier duda que tengas sobre los módulos, la plataforma o los temas de ciberseguridad.📘 Elegí un módulo para investigar:", {
     reply_markup: { inline_keyboard: botones }
   });
 }
