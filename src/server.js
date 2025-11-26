@@ -2,9 +2,9 @@
 
 import express from "express";
 import bot from "./telegram.js";
-import { handleUserMessage, handleModuleSelection, enviarMenu } from "./router.js";
 import { createDB } from "./database.js";
-import { enviarMenu, updateModule } from "./router.js";
+import { enviarMenu, updateModule, handleUserMessage, handleModuleSelection } from "./router.js";
+
 
 
 const app = express();
