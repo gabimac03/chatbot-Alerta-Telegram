@@ -9,7 +9,7 @@ const client = new Groq({ apiKey: GROQ_API_KEY });
 export async function IA(prompt) {
   try {
     const completion = await client.chat.completions.create({
-      model: "llama-3.1-70b-versatile",   // ⭐ Modelo más estable y preciso
+      model: "llama-3.3-70b-specdec",   // ⭐ Modelo más estable y preciso
       messages: [
         {
           role: "system",
