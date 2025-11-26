@@ -105,9 +105,10 @@ export async function handleUserMessage(chatId, text) {
 
   // === DETECTAR CAMBIO DE MÓDULO POR TEXTO (corto) ===
   // Permite: "modulo 1", "módulo 2", "quiero modulo 1"
+
   const matchModulo = saludo.match(/m[oó]dulo\s*(\d)/);
 
-  if (matchModulo && saludo.length <= 12) {
+  if (matchModulo) {
     const numero = matchModulo[1];
 
     updateModule(chatId, numero);

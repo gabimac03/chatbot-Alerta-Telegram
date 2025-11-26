@@ -13,6 +13,9 @@ const db = createDB();
 import { setDB } from "./router.js";
 setDB(db);
 
+console.log("📥 Update recibido:", JSON.stringify(update, null, 2));
+
+
 // Webhook de Telegram
 app.post("/webhook", async (req, res) => {
   const update = req.body;
